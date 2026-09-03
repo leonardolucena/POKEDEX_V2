@@ -1,8 +1,10 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:pokedex/core/constants/api_constants.dart';
 import 'package:pokedex/data/models/pokemon.dart';
 import 'package:pokedex/data/models/pokemon_list_item.dart';
+import 'package:pokedex/data/models/pokemon_species.dart';
 import 'package:pokedex/data/repositories/pokemon_repository.dart';
 import 'package:pokedex/data/services/pokeapi_service.dart';
 
@@ -62,13 +64,16 @@ class PokemonListNotifier extends Notifier<PokemonListState> {
 
   @override
   PokemonListState build() {
-    Future.microtask(refresh);
-    return const PokemonListState(isLoading: true);
+    return const PokemonListState();
   }
 
   Future<void> refresh() async {
     _offset = 0;
-    state = const PokemonListState(isLoading: true);
+    final previousItems = state.items;
+    state = PokemonListState(
+      isLoading: true,
+      items: previousItems,
+    );
 
     try {
       final response = await ref.read(pokemonRepositoryProvider).fetchPokemonList(
@@ -83,7 +88,10 @@ class PokemonListNotifier extends Notifier<PokemonListState> {
         hasMore: _offset < response.count,
       );
     } catch (error) {
-      state = PokemonListState(error: error);
+      state = PokemonListState(
+        items: previousItems,
+        error: error,
+      );
     }
   }
 
@@ -119,3 +127,135 @@ final pokemonDetailProvider =
     FutureProvider.family<Pokemon, String>((ref, idOrName) {
   return ref.watch(pokemonRepositoryProvider).fetchPokemon(idOrName);
 });
+
+final descriptionScrollControllerProvider = Provider<ScrollController>((ref) {
+  final controller = ScrollController();
+  ref.onDispose(controller.dispose);
+  return controller;
+});
+
+class PokedexNavigationNotifier extends Notifier<int> {
+  static const _scrollStep = 32.0;
+
+  @override
+  int build() => 0;
+
+  Future<void> selectNext() async {
+    final listState = ref.read(pokemonListNotifierProvider);
+    if (listState.items.isEmpty) return;
+
+    if (state < listState.items.length - 1) {
+      state = state + 1;
+      _preloadNextPage();
+      return;
+    }
+
+    if (!listState.hasMore || listState.isLoadingMore) return;
+
+    await ref.read(pokemonListNotifierProvider.notifier).loadMore();
+    final updated = ref.read(pokemonListNotifierProvider);
+    if (state < updated.items.length - 1) {
+      state = state + 1;
+    }
+  }
+
+  void selectPrevious() {
+    if (state > 0) {
+      state = state - 1;
+    }
+  }
+
+  void scrollDescriptionUp() {
+    _scrollBy(-_scrollStep);
+  }
+
+  void scrollDescriptionDown() {
+    _scrollBy(_scrollStep);
+  }
+
+  void _scrollBy(double delta) {
+    final controller = ref.read(descriptionScrollControllerProvider);
+    if (!controller.hasClients) return;
+
+    final target = (controller.offset + delta)
+        .clamp(0.0, controller.position.maxScrollExtent);
+
+    controller.animateTo(
+      target,
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOut,
+    );
+  }
+
+  void _preloadNextPage() {
+    final listState = ref.read(pokemonListNotifierProvider);
+    if (state >= listState.items.length - 3 &&
+        listState.hasMore &&
+        !listState.isLoadingMore) {
+      ref.read(pokemonListNotifierProvider.notifier).loadMore();
+    }
+  }
+}
+
+final pokedexNavigationProvider =
+    NotifierProvider<PokedexNavigationNotifier, int>(
+  PokedexNavigationNotifier.new,
+);
+
+class FeaturedPokemonDetails {
+  const FeaturedPokemonDetails({
+    required this.pokemon,
+    required this.description,
+  });
+
+  final Pokemon pokemon;
+  final String description;
+}
+
+final featuredPokemonProvider = FutureProvider<FeaturedPokemonDetails>((ref) async {
+  final selectedIndex = ref.watch(pokedexNavigationProvider);
+  final listState = ref.watch(pokemonListNotifierProvider);
+
+  if (listState.items.isEmpty) {
+    throw listState.error ?? Exception('Não foi possível carregar os Pokémon.');
+  }
+
+  final safeIndex = selectedIndex.clamp(0, listState.items.length - 1);
+  final pokemonName = listState.items[safeIndex].name;
+  final repository = ref.read(pokemonRepositoryProvider);
+
+  final results = await Future.wait([
+    repository.fetchPokemon(pokemonName),
+    repository.fetchPokemonSpecies(pokemonName),
+  ]);
+
+  final pokemon = results[0] as Pokemon;
+  final species = results[1] as PokemonSpecies;
+
+  return FeaturedPokemonDetails(
+    pokemon: pokemon,
+    description: species.description,
+  );
+});
+
+Future<void> preloadPokedexData(WidgetRef ref) async {
+  await ref.read(pokemonListNotifierProvider.notifier).refresh();
+
+  final listState = ref.read(pokemonListNotifierProvider);
+  if (listState.items.isEmpty) {
+    throw listState.error ?? Exception('Não foi possível carregar os Pokémon.');
+  }
+
+  ref.invalidate(featuredPokemonProvider);
+  await ref.read(featuredPokemonProvider.future);
+}
+
+Future<void> reloadPokedexData(WidgetRef ref) async {
+  await ref.read(pokemonListNotifierProvider.notifier).refresh();
+  ref.invalidate(featuredPokemonProvider);
+
+  final listState = ref.read(pokemonListNotifierProvider);
+  if (listState.items.isNotEmpty) {
+    await ref.read(featuredPokemonProvider.future);
+  }
+}

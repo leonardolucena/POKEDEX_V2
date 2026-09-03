@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pokedex/core/router/app_router.dart';
+import 'package:pokedex/core/theme/app_status_bar_style.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setSystemUIOverlayStyle(AppStatusBarStyle.light);
   runApp(const ProviderScope(child: PokedexApp()));
 }
 
@@ -15,11 +19,14 @@ class PokedexApp extends ConsumerWidget {
 
     return MaterialApp.router(
       title: 'Pokédex',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
         useMaterial3: true,
-      ),
-      routerConfig: router,
+        appBarTheme: const AppBarTheme(
+          systemOverlayStyle: AppStatusBarStyle.light,
+        ),
+      ),      routerConfig: router,
     );
   }
 }

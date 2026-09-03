@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:pokedex/core/constants/api_constants.dart';
 import 'package:pokedex/data/models/pokemon.dart';
 import 'package:pokedex/data/models/pokemon_list_response.dart';
+import 'package:pokedex/data/models/pokemon_species.dart';
 
 class PokeApiException implements Exception {
   PokeApiException(this.message, {this.statusCode});
@@ -53,5 +54,21 @@ class PokeApiService {
     }
 
     return Pokemon.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
+
+  Future<PokemonSpecies> fetchPokemonSpecies(String idOrName) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}/pokemon-species/$idOrName');
+    final response = await _client.get(uri);
+
+    if (response.statusCode != 200) {
+      throw PokeApiException(
+        'Espécie de Pokémon não encontrada.',
+        statusCode: response.statusCode,
+      );
+    }
+
+    return PokemonSpecies.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
   }
 }

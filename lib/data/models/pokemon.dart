@@ -1,3 +1,5 @@
+import 'package:pokedex/data/models/pokemon_stats.dart';
+
 class Pokemon {
   const Pokemon({
     required this.id,
@@ -6,6 +8,7 @@ class Pokemon {
     required this.types,
     required this.height,
     required this.weight,
+    required this.stats,
   });
 
   final int id;
@@ -14,6 +17,7 @@ class Pokemon {
   final List<String> types;
   final int height;
   final int weight;
+  final PokemonStats stats;
 
   factory Pokemon.fromJson(Map<String, dynamic> json) {
     final sprites = json['sprites'] as Map<String, dynamic>?;
@@ -32,6 +36,7 @@ class Pokemon {
           .toList(),
       height: json['height'] as int,
       weight: json['weight'] as int,
+      stats: PokemonStats.fromJson(json['stats'] as List<dynamic>),
     );
   }
 }

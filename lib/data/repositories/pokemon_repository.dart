@@ -1,5 +1,6 @@
 import 'package:pokedex/data/models/pokemon.dart';
 import 'package:pokedex/data/models/pokemon_list_response.dart';
+import 'package:pokedex/data/models/pokemon_species.dart';
 import 'package:pokedex/data/services/pokeapi_service.dart';
 
 class PokemonRepository {
@@ -16,5 +17,9 @@ class PokemonRepository {
 
   Future<Pokemon> fetchPokemon(String idOrName) {
     return _service.fetchPokemon(idOrName);
+  }
+
+  Future<PokemonSpecies> fetchPokemonSpecies(String idOrName) {
+    return _service.fetchPokemonSpecies(idOrName);
   }
 }

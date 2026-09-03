@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pokedex/core/router/app_routes.dart';
+import 'package:pokedex/core/theme/app_status_bar_style.dart';
 import 'package:pokedex/presentation/widgets/pokeball_face.dart';
 import 'package:pokedex/providers/pokemon_providers.dart';
 
@@ -46,15 +48,16 @@ class _SplashPageState extends ConsumerState<SplashPage>
   }
 
   Future<void> _startSplash() async {
-    final minimumDisplay = Future<void>.delayed(
-      const Duration(milliseconds: 900),
-    );
-    final loadData = ref.read(pokemonListNotifierProvider.notifier).refresh();
-
-    await Future.wait([
-      minimumDisplay,
-      loadData.catchError((_) {}),
-    ]);
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        await preloadPokedexData(ref);
+        break;
+      } catch (_) {
+        if (attempt == 0) {
+          await Future<void>.delayed(const Duration(milliseconds: 500));
+        }
+      }
+    }
 
     if (!mounted) return;
 
@@ -72,26 +75,29 @@ class _SplashPageState extends ConsumerState<SplashPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: PokeballColors.white,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Align(
-            alignment: Alignment.topCenter,
-            child: SlideTransition(
-              position: _topSlide,
-              child: const PokeballTopHalf(),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: AppStatusBarStyle.light,
+      child: Scaffold(
+        backgroundColor: PokeballColors.white,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            Align(
+              alignment: Alignment.topCenter,
+              child: SlideTransition(
+                position: _topSlide,
+                child: const PokeballTopHalf(),
+              ),
             ),
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: SlideTransition(
-              position: _bottomSlide,
-              child: const PokeballBottomHalf(),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: SlideTransition(
+                position: _bottomSlide,
+                child: const PokeballBottomHalf(),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
