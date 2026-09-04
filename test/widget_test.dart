@@ -146,7 +146,10 @@ void main() {
     );
 
     await tester.pump();
-    await tester.pumpAndSettle(const Duration(seconds: 3));
+    for (var i = 0; i < 50; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+      if (find.byType(PokeballTopHalf).evaluate().isEmpty) break;
+    }
 
     expect(find.byType(PokedexDeviceHeader), findsOneWidget);
     expect(find.byType(PokeballTopHalf), findsNothing);
