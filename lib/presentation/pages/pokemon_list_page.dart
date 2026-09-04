@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pokedex/core/theme/app_status_bar_style.dart';
+import 'package:pokedex/presentation/pages/splash_page.dart';
 import 'package:pokedex/presentation/widgets/pokedex_device_header.dart';
 
 class PokemonListPage extends StatelessWidget {
@@ -8,12 +9,14 @@ class PokemonListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: AppStatusBarStyle.light,
-      child: Scaffold(
-        backgroundColor: PokedexDeviceColors.backgroundRed,
-        body: const SizedBox.expand(
-          child: PokedexDeviceHeader(),
+    return SplashPage(
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: AppStatusBarStyle.light,
+        child: Scaffold(
+          backgroundColor: PokedexDeviceColors.backgroundRed,
+          body: const SizedBox.expand(
+            child: PokedexDeviceHeader(),
+          ),
         ),
       ),
     );

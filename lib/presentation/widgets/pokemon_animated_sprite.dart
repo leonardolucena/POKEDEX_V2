@@ -25,8 +25,8 @@ class PokemonAnimatedSprite extends StatelessWidget {
     final width = math.min(maxWidth ?? absoluteMax, absoluteMax);
     final height = math.min(maxHeight ?? absoluteMax, absoluteMax);
 
-    return Image.network(
-      PokemonSpriteUrls.blackWhiteAnimated(pokemonName),
+    return Image(
+      image: NetworkImage(PokemonSpriteUrls.blackWhiteAnimated(pokemonName)),
       width: width,
       height: height,
       fit: BoxFit.contain,

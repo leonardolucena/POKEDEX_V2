@@ -4,18 +4,17 @@ import 'package:go_router/go_router.dart';
 import 'package:pokedex/core/router/app_routes.dart';
 import 'package:pokedex/presentation/pages/pokemon_detail_page.dart';
 import 'package:pokedex/presentation/pages/pokemon_list_page.dart';
-import 'package:pokedex/presentation/pages/splash_page.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: AppRoutes.splash,
+    initialLocation: AppRoutes.home,
     routes: [
       GoRoute(
         path: AppRoutes.splash,
-        builder: (context, state) => const SplashPage(),
+        redirect: (context, state) => AppRoutes.home,
       ),
       GoRoute(
         path: AppRoutes.home,

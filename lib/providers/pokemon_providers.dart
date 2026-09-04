@@ -8,6 +8,7 @@ import 'package:pokedex/data/models/pokemon.dart';
 import 'package:pokedex/data/models/pokemon_list_item.dart';
 import 'package:pokedex/data/repositories/pokemon_repository.dart';
 import 'package:pokedex/data/services/pokeapi_service.dart';
+import 'package:pokedex/data/services/pokemon_sprite_preloader.dart';
 
 export 'package:pokedex/data/models/featured_pokemon_details.dart';
 
@@ -30,6 +31,12 @@ final pokemonRepositoryProvider = Provider<PokemonRepository>((ref) {
     service: ref.watch(pokeApiServiceProvider),
     cache: ref.watch(pokemonDetailsCacheProvider),
   );
+});
+
+typedef PokemonSpritePreloader = Future<void> Function(String pokemonName);
+
+final pokemonSpritePreloaderProvider = Provider<PokemonSpritePreloader>((ref) {
+  return preloadAnimatedSprite;
 });
 
 class PokemonListState {
@@ -144,19 +151,44 @@ final descriptionScrollControllerProvider = Provider<ScrollController>((ref) {
   return controller;
 });
 
-class PokedexNavigationNotifier extends Notifier<int> {
+enum PokedexNavigationDirection { forward, backward }
+
+class PokedexNavigationState {
+  const PokedexNavigationState({
+    this.index = 0,
+    this.direction = PokedexNavigationDirection.forward,
+  });
+
+  final int index;
+  final PokedexNavigationDirection direction;
+
+  PokedexNavigationState copyWith({
+    int? index,
+    PokedexNavigationDirection? direction,
+  }) {
+    return PokedexNavigationState(
+      index: index ?? this.index,
+      direction: direction ?? this.direction,
+    );
+  }
+}
+
+class PokedexNavigationNotifier extends Notifier<PokedexNavigationState> {
   static const _scrollStep = 32.0;
   static const _preloadAhead = 5;
 
   @override
-  int build() => 0;
+  PokedexNavigationState build() => const PokedexNavigationState();
 
   Future<void> selectNext() async {
     final listState = ref.read(pokemonListNotifierProvider);
     if (listState.items.isEmpty) return;
 
-    if (state < listState.items.length - 1) {
-      state = state + 1;
+    if (state.index < listState.items.length - 1) {
+      state = state.copyWith(
+        index: state.index + 1,
+        direction: PokedexNavigationDirection.forward,
+      );
       _preloadNextPage();
       preloadNearbyDetails();
       return;
@@ -166,15 +198,21 @@ class PokedexNavigationNotifier extends Notifier<int> {
 
     await ref.read(pokemonListNotifierProvider.notifier).loadMore();
     final updated = ref.read(pokemonListNotifierProvider);
-    if (state < updated.items.length - 1) {
-      state = state + 1;
+    if (state.index < updated.items.length - 1) {
+      state = state.copyWith(
+        index: state.index + 1,
+        direction: PokedexNavigationDirection.forward,
+      );
       preloadNearbyDetails();
     }
   }
 
   void selectPrevious() {
-    if (state > 0) {
-      state = state - 1;
+    if (state.index > 0) {
+      state = state.copyWith(
+        index: state.index - 1,
+        direction: PokedexNavigationDirection.backward,
+      );
       preloadNearbyDetails();
     }
   }
@@ -203,7 +241,7 @@ class PokedexNavigationNotifier extends Notifier<int> {
 
   void _preloadNextPage() {
     final listState = ref.read(pokemonListNotifierProvider);
-    if (state >= listState.items.length - 3 &&
+    if (state.index >= listState.items.length - 3 &&
         listState.hasMore &&
         !listState.isLoadingMore) {
       ref.read(pokemonListNotifierProvider.notifier).loadMore();
@@ -214,7 +252,7 @@ class PokedexNavigationNotifier extends Notifier<int> {
     final listState = ref.read(pokemonListNotifierProvider);
     if (listState.items.isEmpty) return;
 
-    final safeIndex = state.clamp(0, listState.items.length - 1);
+    final safeIndex = state.index.clamp(0, listState.items.length - 1);
     final names = <String>{};
 
     for (var offset = 0; offset <= _preloadAhead; offset++) {
@@ -230,12 +268,12 @@ class PokedexNavigationNotifier extends Notifier<int> {
 }
 
 final pokedexNavigationProvider =
-    NotifierProvider<PokedexNavigationNotifier, int>(
+    NotifierProvider<PokedexNavigationNotifier, PokedexNavigationState>(
   PokedexNavigationNotifier.new,
 );
 
 final featuredPokemonProvider = FutureProvider<FeaturedPokemonDetails>((ref) async {
-  final selectedIndex = ref.watch(pokedexNavigationProvider);
+  final selectedIndex = ref.watch(pokedexNavigationProvider).index;
   final listState = ref.watch(pokemonListNotifierProvider);
 
   if (listState.items.isEmpty) {
@@ -258,7 +296,8 @@ Future<void> preloadPokedexData(WidgetRef ref) async {
   }
 
   ref.invalidate(featuredPokemonProvider);
-  await ref.read(featuredPokemonProvider.future);
+  final featured = await ref.read(featuredPokemonProvider.future);
+  await ref.read(pokemonSpritePreloaderProvider)(featured.pokemon.name);
   ref.read(pokedexNavigationProvider.notifier).preloadNearbyDetails();
 }
 
@@ -269,7 +308,8 @@ Future<void> reloadPokedexData(WidgetRef ref) async {
 
   final listState = ref.read(pokemonListNotifierProvider);
   if (listState.items.isNotEmpty) {
-    await ref.read(featuredPokemonProvider.future);
+    final featured = await ref.read(featuredPokemonProvider.future);
+    await ref.read(pokemonSpritePreloaderProvider)(featured.pokemon.name);
     ref.read(pokedexNavigationProvider.notifier).preloadNearbyDetails();
   }
 }

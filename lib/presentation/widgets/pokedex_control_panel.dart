@@ -23,7 +23,7 @@ class PokedexControlPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedIndex = ref.watch(pokedexNavigationProvider);
+    final selectedIndex = ref.watch(pokedexNavigationProvider).index;
     final listState = ref.watch(pokemonListNotifierProvider);
     final displayName = _pokemonDisplayName(listState, selectedIndex);
     final width = MediaQuery.sizeOf(context).width;

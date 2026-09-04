@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pokedex/core/constants/app_assets.dart';
+import 'package:pokedex/presentation/widgets/pokemon_background_transition.dart';
+import 'package:pokedex/presentation/widgets/pokemon_sprite_transition.dart';
 import 'package:pokedex/presentation/widgets/pokemon_stats_radar_chart.dart';
-import 'package:pokedex/presentation/widgets/pokemon_animated_sprite.dart';
 import 'package:pokedex/presentation/widgets/pokedex_control_panel.dart';
 import 'package:pokedex/presentation/widgets/pokedex_top_cap.dart';
 import 'package:pokedex/data/models/pokemon.dart';
@@ -176,9 +176,7 @@ class _PokedexFrame extends StatelessWidget {
                         right: inset,
                         top: screenTop,
                         height: screenHeight.clamp(0, double.infinity),
-                        child: _PokedexScreen(
-                          backgroundImage: AppAssets.campo,
-                        ),
+                        child: const _PokedexScreen(),
                       ),
                       const Positioned(
                         left: PokedexDeviceLayout.frameInset,
@@ -206,11 +204,7 @@ class _PokedexFrame extends StatelessWidget {
 }
 
 class _PokedexScreen extends ConsumerStatefulWidget {
-  const _PokedexScreen({
-    required this.backgroundImage,
-  });
-
-  final String backgroundImage;
+  const _PokedexScreen();
 
   @override
   ConsumerState<_PokedexScreen> createState() => _PokedexScreenState();
@@ -233,7 +227,7 @@ class _PokedexScreenState extends ConsumerState<_PokedexScreen> {
     final listState = ref.watch(pokemonListNotifierProvider);
 
     ref.listen(pokedexNavigationProvider, (previous, next) {
-      if (previous != next) {
+      if (previous?.index != next.index) {
         final controller = ref.read(descriptionScrollControllerProvider);
         if (controller.hasClients) {
           controller.jumpTo(0);
@@ -304,76 +298,69 @@ class _PokedexScreenState extends ConsumerState<_PokedexScreen> {
 
     final featuredAsync = ref.watch(featuredPokemonProvider);
 
-    return featuredAsync.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(
-          color: Colors.white,
-          strokeWidth: 2,
-        ),
-      ),
-      error: (error, stackTrace) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+    return Column(
+      children: [
+        Expanded(
+          flex: 50,
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              Text(
-                'Falha ao carregar os dados.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.8),
-                  fontSize: 11,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => reloadPokedexData(ref),
-                child: const Text(
-                  'Tentar novamente',
-                  style: TextStyle(color: Colors.white, fontSize: 11),
-                ),
+              const PokemonBackgroundTransition(),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  return PokemonSpriteTransition(
+                    maxWidth: constraints.maxWidth * 0.50,
+                    maxHeight: constraints.maxHeight * 0.50,
+                  );
+                },
               ),
             ],
           ),
         ),
-      ),
-      data: (featured) => Column(
-        children: [
-          Expanded(
-            flex: 50,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.asset(
-                  widget.backgroundImage,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    return Center(
-                      child: PokemonAnimatedSprite(
-                        pokemonName: featured.pokemon.name,
-                        maxWidth: constraints.maxWidth * 0.50,
-                        maxHeight: constraints.maxHeight * 0.50,
-                      ),
-                    );
-                  },
-                ),
-              ],
+        Expanded(
+          flex: 50,
+          child: featuredAsync.when(
+            loading: () => const Center(
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
             ),
-          ),
-          Expanded(
-            flex: 50,
-            child: _PokemonDescriptionSection(
+            error: (error, stackTrace) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Falha ao carregar os dados.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: () => reloadPokedexData(ref),
+                      child: const Text(
+                        'Tentar novamente',
+                        style: TextStyle(color: Colors.white, fontSize: 11),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            data: (featured) => _PokemonDescriptionSection(
               key: ValueKey(featured.pokemon.id),
               pokemon: featured.pokemon,
               description: featured.description,
               genus: featured.genus,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

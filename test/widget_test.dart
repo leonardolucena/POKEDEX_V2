@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:pokedex/main.dart';
+import 'package:pokedex/presentation/widgets/pokeball_face.dart';
 import 'package:pokedex/presentation/widgets/pokedex_device_header.dart';
 import 'package:pokedex/providers/pokemon_providers.dart';
 
@@ -106,6 +107,7 @@ void main() {
       ProviderScope(
         overrides: [
           httpClientProvider.overrideWithValue(_mockPokeApiClient()),
+          pokemonSpritePreloaderProvider.overrideWithValue((_) async {}),
         ],
         child: const MaterialApp(
           home: Scaffold(
@@ -130,19 +132,16 @@ void main() {
       ProviderScope(
         overrides: [
           httpClientProvider.overrideWithValue(_mockPokeApiClient()),
+          pokemonSpritePreloaderProvider.overrideWithValue((_) async {}),
         ],
         child: const PokedexApp(),
       ),
     );
 
     await tester.pump();
-    for (var frame = 0; frame < 30; frame++) {
-      await tester.pump(const Duration(milliseconds: 100));
-      if (find.byType(PokedexDeviceHeader).evaluate().isNotEmpty) {
-        break;
-      }
-    }
+    await tester.pumpAndSettle(const Duration(seconds: 3));
 
     expect(find.byType(PokedexDeviceHeader), findsOneWidget);
+    expect(find.byType(PokeballTopHalf), findsNothing);
   });
 }
