@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:pokedex/data/models/pokemon_nature.dart';
 import 'package:pokedex/data/models/pokemon_stats.dart';
 
 abstract final class PokemonStatsRadarChartColors {
@@ -12,20 +11,17 @@ abstract final class PokemonStatsRadarChartColors {
   static const fillStroke = Color(0xB376B8E8);
   static const label = Color(0xFFF0C84B);
   static const value = Color(0xFFF7F7F7);
-  static const natureText = Color(0xFFB8B8B8);
 }
 
 class PokemonStatsRadarChart extends StatelessWidget {
   const PokemonStatsRadarChart({
     super.key,
     required this.stats,
-    required this.pokemonId,
     this.size = 255,
     this.maxValue = 255,
   });
 
   final PokemonStats stats;
-  final int pokemonId;
   final double size;
   final double maxValue;
 
@@ -33,7 +29,6 @@ class PokemonStatsRadarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final nature = PokemonNature.forPokemonId(pokemonId);
     final values = stats.chartValues;
 
     return LayoutBuilder(
@@ -74,6 +69,7 @@ class PokemonStatsRadarChart extends StatelessWidget {
                       index < PokemonStats.chartLabels.length;
                       index++)
                     _StatLabel(
+                      statIndex: index,
                       label: PokemonStats.chartLabels[index],
                       value: values[index],
                       angle: _vertexAngle(index),
@@ -85,11 +81,11 @@ class PokemonStatsRadarChart extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Nature: ${nature.displayName}',
+              'Total ${stats.total}',
               style: const TextStyle(
-                color: PokemonStatsRadarChartColors.natureText,
-                fontSize: 9,
-                fontWeight: FontWeight.w500,
+                color: PokemonStatsRadarChartColors.label,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
                 height: 1.4,
               ),
             ),
@@ -104,8 +100,34 @@ class PokemonStatsRadarChart extends StatelessWidget {
   }
 }
 
+class _StatLabelConfig {
+  const _StatLabelConfig({
+    this.radiusFactor = 1,
+    this.width = 56,
+    this.height = 34,
+    this.labelFontSize = 9,
+    this.maxLines = 1,
+  });
+
+  final double radiusFactor;
+  final double width;
+  final double height;
+  final double labelFontSize;
+  final int maxLines;
+}
+
+const _statLabelConfigs = [
+  _StatLabelConfig(),
+  _StatLabelConfig(width: 60),
+  _StatLabelConfig(width: 60),
+  _StatLabelConfig(width: 78),
+  _StatLabelConfig(radiusFactor: 1.2, width: 74, height: 40, labelFontSize: 8, maxLines: 2),
+  _StatLabelConfig(radiusFactor: 1.2, width: 74, height: 40, labelFontSize: 8, maxLines: 2),
+];
+
 class _StatLabel extends StatelessWidget {
   const _StatLabel({
+    required this.statIndex,
     required this.label,
     required this.value,
     required this.angle,
@@ -113,6 +135,7 @@ class _StatLabel extends StatelessWidget {
     required this.chartCenter,
   });
 
+  final int statIndex;
   final String label;
   final int value;
   final double angle;
@@ -121,28 +144,48 @@ class _StatLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final config = _statLabelConfigs[statIndex];
+    final effectiveRadius = radius * config.radiusFactor;
     final position = Offset(
-      chartCenter.dx + radius * math.cos(angle),
-      chartCenter.dy + radius * math.sin(angle),
+      chartCenter.dx + effectiveRadius * math.cos(angle),
+      chartCenter.dy + effectiveRadius * math.sin(angle),
     );
 
     return Positioned(
-      left: position.dx - 28,
-      top: position.dy - 17,
-      width: 56,
+      left: position.dx - config.width / 2,
+      top: position.dy - config.height / 2,
+      width: config.width,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: PokemonStatsRadarChartColors.label,
-              fontSize: 9,
-              fontWeight: FontWeight.w600,
-              height: 1.2,
+          if (config.maxLines == 1)
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                softWrap: false,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: PokemonStatsRadarChartColors.label,
+                  fontSize: config.labelFontSize,
+                  fontWeight: FontWeight.w600,
+                  height: 1.15,
+                ),
+              ),
+            )
+          else
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: config.maxLines,
+              style: TextStyle(
+                color: PokemonStatsRadarChartColors.label,
+                fontSize: config.labelFontSize,
+                fontWeight: FontWeight.w600,
+                height: 1.15,
+              ),
             ),
-          ),
           const SizedBox(height: 2),
           Text(
             '$value',

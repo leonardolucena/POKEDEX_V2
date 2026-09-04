@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:pokedex/providers/pokemon_providers.dart';
+import 'package:pokedex/data/services/description_translator.dart';
 
 void main() {
   test('featuredPokemonProvider carrega dados sem modificar providers durante build',
@@ -91,6 +92,9 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         httpClientProvider.overrideWithValue(client),
+        descriptionTranslatorProvider.overrideWithValue(
+          PassthroughDescriptionTranslator(),
+        ),
       ],
     );
     addTearDown(container.dispose);

@@ -8,6 +8,7 @@ import 'package:pokedex/data/models/featured_pokemon_details.dart';
 import 'package:pokedex/data/models/pokemon.dart';
 import 'package:pokedex/data/models/pokemon_stats.dart';
 import 'package:pokedex/data/repositories/pokemon_repository.dart';
+import 'package:pokedex/data/services/description_translator.dart';
 import 'package:pokedex/data/services/pokeapi_service.dart';
 
 void main() {
@@ -72,6 +73,7 @@ void main() {
     final repository = PokemonRepository(
       service: PokeApiService(client: client),
       cache: cache,
+      descriptionTranslator: PassthroughDescriptionTranslator(),
     );
 
     final first = await repository.fetchFeaturedPokemonDetails('bulbasaur');

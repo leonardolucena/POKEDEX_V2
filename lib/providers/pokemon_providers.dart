@@ -9,6 +9,7 @@ import 'package:pokedex/data/models/featured_pokemon_details.dart';
 import 'package:pokedex/data/models/pokemon.dart';
 import 'package:pokedex/data/models/pokemon_list_item.dart';
 import 'package:pokedex/data/repositories/pokemon_repository.dart';
+import 'package:pokedex/data/services/description_translator.dart';
 import 'package:pokedex/data/services/pokeapi_service.dart';
 import 'package:pokedex/data/services/pokemon_sprite_preloader.dart';
 
@@ -28,10 +29,15 @@ final pokemonDetailsCacheProvider = Provider<PokemonDetailsCache>((ref) {
   return PokemonDetailsCache();
 });
 
+final descriptionTranslatorProvider = Provider<DescriptionTranslator>((ref) {
+  return GoogleDescriptionTranslator();
+});
+
 final pokemonRepositoryProvider = Provider<PokemonRepository>((ref) {
   return PokemonRepository(
     service: ref.watch(pokeApiServiceProvider),
     cache: ref.watch(pokemonDetailsCacheProvider),
+    descriptionTranslator: ref.watch(descriptionTranslatorProvider),
   );
 });
 

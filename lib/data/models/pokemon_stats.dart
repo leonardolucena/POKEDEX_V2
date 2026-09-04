@@ -18,12 +18,12 @@ class PokemonStats {
   final int speed;
 
   static const chartLabels = [
-    'HP',
-    'Atk',
-    'Def',
-    'Spe',
-    'SpD',
-    'SpA',
+    'Vida',
+    'Ataque',
+    'Defesa',
+    'Velocidade',
+    'Especial\nDefesa',
+    'Especial\nAtaque',
   ];
 
   static const chartStatKeys = [

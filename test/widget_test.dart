@@ -9,6 +9,7 @@ import 'package:pokedex/main.dart';
 import 'package:pokedex/presentation/widgets/pokeball_face.dart';
 import 'package:pokedex/presentation/widgets/pokedex_device_header.dart';
 import 'package:pokedex/providers/pokemon_providers.dart';
+import 'package:pokedex/data/services/description_translator.dart';
 
 http.Client _mockPokeApiClient() {
   return MockClient((request) async {
@@ -108,6 +109,9 @@ void main() {
         overrides: [
           httpClientProvider.overrideWithValue(_mockPokeApiClient()),
           pokemonSpritePreloaderProvider.overrideWithValue((_) async {}),
+          descriptionTranslatorProvider.overrideWithValue(
+            PassthroughDescriptionTranslator(),
+          ),
         ],
         child: const MaterialApp(
           home: Scaffold(
@@ -133,6 +137,9 @@ void main() {
         overrides: [
           httpClientProvider.overrideWithValue(_mockPokeApiClient()),
           pokemonSpritePreloaderProvider.overrideWithValue((_) async {}),
+          descriptionTranslatorProvider.overrideWithValue(
+            PassthroughDescriptionTranslator(),
+          ),
         ],
         child: const PokedexApp(),
       ),

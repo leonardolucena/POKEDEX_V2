@@ -3,17 +3,21 @@ import 'package:pokedex/data/models/featured_pokemon_details.dart';
 import 'package:pokedex/data/models/pokemon.dart';
 import 'package:pokedex/data/models/pokemon_list_response.dart';
 import 'package:pokedex/data/models/pokemon_species.dart';
+import 'package:pokedex/data/services/description_translator.dart';
 import 'package:pokedex/data/services/pokeapi_service.dart';
 
 class PokemonRepository {
   PokemonRepository({
     required PokeApiService service,
     required PokemonDetailsCache cache,
+    required DescriptionTranslator descriptionTranslator,
   })  : _service = service,
-        _cache = cache;
+        _cache = cache,
+        _descriptionTranslator = descriptionTranslator;
 
   final PokeApiService _service;
   final PokemonDetailsCache _cache;
+  final DescriptionTranslator _descriptionTranslator;
 
   Future<PokemonListResponse> fetchPokemonList({
     int limit = 20,
@@ -48,9 +52,15 @@ class PokemonRepository {
     final pokemon = results[0] as Pokemon;
     final species = results[1] as PokemonSpecies;
 
+    final description = species.descriptionLanguageCode == 'en'
+        ? await _descriptionTranslator.translateEnglishToPortuguese(
+            species.description,
+          )
+        : species.description;
+
     final details = FeaturedPokemonDetails(
       pokemon: pokemon,
-      description: species.description,
+      description: description,
       genus: species.genus,
     );
 

@@ -4,6 +4,7 @@ import 'package:pokedex/presentation/widgets/pokemon_stats_radar_chart.dart';
 import 'package:pokedex/presentation/widgets/pokemon_type_chip.dart';
 import 'package:pokedex/providers/pokemon_providers.dart';
 import 'package:pokedex/data/models/pokemon.dart';
+import 'package:pokedex/data/models/pokemon_nature.dart';
 
 abstract final class _DescriptionColors {
   static const infoLabelBlue = Color(0xFF00D4FF);
@@ -26,15 +27,15 @@ class PokemonDescriptionSection extends ConsumerWidget {
 
   static const _infoGap = 6.0;
 
-  static const _labelStyle = TextStyle(
-    color: Colors.white,
+  static const _sectionLabelStyle = TextStyle(
+    color: _DescriptionColors.infoLabelBlue,
     fontSize: 12,
     fontWeight: FontWeight.w700,
     height: 1.4,
   );
 
-  static const _bodyStyle = TextStyle(
-    color: Color(0xFFD6D6D6),
+  static const _descriptionStyle = TextStyle(
+    color: _DescriptionColors.infoValueYellow,
     fontSize: 10,
     height: 1.55,
   );
@@ -66,6 +67,7 @@ class PokemonDescriptionSection extends ConsumerWidget {
               : ability.displayName,
         )
         .join(', ');
+    final nature = PokemonNature.forPokemonId(pokemon.id);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
@@ -119,6 +121,7 @@ class PokemonDescriptionSection extends ConsumerWidget {
                 labelStyle: _metaStyle,
                 valueStyle: _metaValueStyle,
                 minValueLines: 2,
+                centerSingleLineValues: true,
               )
             else
               _MetaLine(
@@ -143,26 +146,23 @@ class PokemonDescriptionSection extends ConsumerWidget {
               const SizedBox(height: 2),
               Text(abilityText, style: _metaValueStyle),
             ],
-            const SizedBox(height: 12),
-            const Text('Descrição', style: _labelStyle),
-            const SizedBox(height: 4),
-            Text(description, style: _bodyStyle),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Text('Stats', style: _labelStyle),
-                const SizedBox(width: 8),
-                Text(
-                  'Total ${pokemon.stats.total}',
-                  style: _metaValueStyle,
-                ),
-              ],
+            const SizedBox(height: _infoGap),
+            _MetaLine(
+              label: 'Natureza',
+              value: nature.displayName,
+              labelStyle: _metaStyle,
+              valueStyle: _metaValueStyle,
             ),
+            const SizedBox(height: 12),
+            const Text('Descrição', style: _sectionLabelStyle),
+            const SizedBox(height: 4),
+            Text(description, style: _descriptionStyle),
+            const SizedBox(height: 12),
+            const Text('Estatísticas', style: _sectionLabelStyle),
             const SizedBox(height: 2),
             Align(
               child: PokemonStatsRadarChart(
                 stats: pokemon.stats,
-                pokemonId: pokemon.id,
               ),
             ),
             const SizedBox(height: 8),
@@ -182,6 +182,7 @@ class _MetaPair extends StatelessWidget {
     required this.labelStyle,
     required this.valueStyle,
     this.minValueLines = 1,
+    this.centerSingleLineValues = false,
   });
 
   final String leftLabel;
@@ -191,6 +192,7 @@ class _MetaPair extends StatelessWidget {
   final TextStyle labelStyle;
   final TextStyle valueStyle;
   final int minValueLines;
+  final bool centerSingleLineValues;
 
   @override
   Widget build(BuildContext context) {
@@ -205,25 +207,29 @@ class _MetaPair extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 2),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: _MetaValueCell(
-                value: leftValue,
-                style: valueStyle,
-                minLines: minValueLines,
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _MetaValueCell(
+                  value: leftValue,
+                  style: valueStyle,
+                  minLines: minValueLines,
+                  centerVertically: centerSingleLineValues,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _MetaValueCell(
-                value: rightValue,
-                style: valueStyle,
-                minLines: minValueLines,
+              const SizedBox(width: 8),
+              Expanded(
+                child: _MetaValueCell(
+                  value: rightValue,
+                  style: valueStyle,
+                  minLines: minValueLines,
+                  centerVertically: centerSingleLineValues,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
@@ -235,11 +241,13 @@ class _MetaValueCell extends StatelessWidget {
     required this.value,
     required this.style,
     required this.minLines,
+    this.centerVertically = false,
   });
 
   final String value;
   final TextStyle style;
   final int minLines;
+  final bool centerVertically;
 
   double get _lineHeight => (style.fontSize ?? 10) * (style.height ?? 1);
 
@@ -248,7 +256,9 @@ class _MetaValueCell extends StatelessWidget {
     return ConstrainedBox(
       constraints: BoxConstraints(minHeight: _lineHeight * minLines),
       child: Align(
-        alignment: Alignment.topLeft,
+        alignment: centerVertically
+            ? Alignment.centerLeft
+            : Alignment.topLeft,
         child: Text(
           value,
           style: style,
