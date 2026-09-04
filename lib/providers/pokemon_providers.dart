@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -190,7 +192,7 @@ class PokedexNavigationNotifier extends Notifier<PokedexNavigationState> {
         direction: PokedexNavigationDirection.forward,
       );
       _preloadNextPage();
-      preloadNearbyDetails();
+      unawaited(preloadNearbyDetails());
       return;
     }
 
@@ -203,7 +205,7 @@ class PokedexNavigationNotifier extends Notifier<PokedexNavigationState> {
         index: state.index + 1,
         direction: PokedexNavigationDirection.forward,
       );
-      preloadNearbyDetails();
+      unawaited(preloadNearbyDetails());
     }
   }
 
@@ -213,7 +215,7 @@ class PokedexNavigationNotifier extends Notifier<PokedexNavigationState> {
         index: state.index - 1,
         direction: PokedexNavigationDirection.backward,
       );
-      preloadNearbyDetails();
+      unawaited(preloadNearbyDetails());
     }
   }
 
@@ -248,7 +250,7 @@ class PokedexNavigationNotifier extends Notifier<PokedexNavigationState> {
     }
   }
 
-  void preloadNearbyDetails() {
+  Future<void> preloadNearbyDetails({bool awaitSprites = false}) async {
     final listState = ref.read(pokemonListNotifierProvider);
     if (listState.items.isEmpty) return;
 
@@ -263,7 +265,17 @@ class PokedexNavigationNotifier extends Notifier<PokedexNavigationState> {
 
     final repository = ref.read(pokemonRepositoryProvider);
     repository.retainCachedFeaturedDetails(names);
-    repository.preloadFeaturedPokemonDetails(names.toList());
+    final detailsFuture = repository.preloadFeaturedPokemonDetails(names.toList());
+    final spritesFuture = _preloadSprites(names);
+
+    if (awaitSprites) {
+      await Future.wait([detailsFuture, spritesFuture]);
+    }
+  }
+
+  Future<void> _preloadSprites(Set<String> names) {
+    final preloader = ref.read(pokemonSpritePreloaderProvider);
+    return Future.wait(names.map(preloader));
   }
 }
 
@@ -298,7 +310,9 @@ Future<void> preloadPokedexData(WidgetRef ref) async {
   ref.invalidate(featuredPokemonProvider);
   final featured = await ref.read(featuredPokemonProvider.future);
   await ref.read(pokemonSpritePreloaderProvider)(featured.pokemon.name);
-  ref.read(pokedexNavigationProvider.notifier).preloadNearbyDetails();
+  await ref
+      .read(pokedexNavigationProvider.notifier)
+      .preloadNearbyDetails(awaitSprites: true);
 }
 
 Future<void> reloadPokedexData(WidgetRef ref) async {
@@ -310,6 +324,8 @@ Future<void> reloadPokedexData(WidgetRef ref) async {
   if (listState.items.isNotEmpty) {
     final featured = await ref.read(featuredPokemonProvider.future);
     await ref.read(pokemonSpritePreloaderProvider)(featured.pokemon.name);
-    ref.read(pokedexNavigationProvider.notifier).preloadNearbyDetails();
+    await ref
+        .read(pokedexNavigationProvider.notifier)
+        .preloadNearbyDetails(awaitSprites: true);
   }
 }

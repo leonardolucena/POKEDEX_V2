@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pokedex/presentation/widgets/pokemon_animated_sprite.dart';
@@ -6,10 +8,14 @@ import 'package:pokedex/providers/pokemon_providers.dart';
 class PokemonSpriteTransition extends ConsumerStatefulWidget {
   const PokemonSpriteTransition({
     super.key,
+    required this.stageWidth,
+    required this.stageHeight,
     required this.maxWidth,
     required this.maxHeight,
   });
 
+  final double stageWidth;
+  final double stageHeight;
   final double maxWidth;
   final double maxHeight;
 
@@ -26,6 +32,7 @@ class _PokemonSpriteTransitionState extends ConsumerState<PokemonSpriteTransitio
   late Animation<Offset> _outgoingSlide;
   late Animation<Offset> _incomingSlide;
 
+  int? _displayedIndex;
   String? _displayedName;
   String? _outgoingName;
   String? _incomingName;
@@ -40,9 +47,34 @@ class _PokemonSpriteTransitionState extends ConsumerState<PokemonSpriteTransitio
       if (status != AnimationStatus.completed || !mounted) return;
       setState(() {
         _displayedName = _incomingName;
+        if (_incomingName != null) {
+          final listState = ref.read(pokemonListNotifierProvider);
+          final index = listState.items.indexWhere(
+            (item) => item.name == _incomingName,
+          );
+          if (index >= 0) {
+            _displayedIndex = index;
+          }
+        }
         _outgoingName = null;
         _incomingName = null;
       });
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncInitialSprite());
+  }
+
+  void _syncInitialSprite() {
+    if (!mounted || _displayedIndex != null || _controller.isAnimating) return;
+
+    final navigation = ref.read(pokedexNavigationProvider);
+    final listState = ref.read(pokemonListNotifierProvider);
+    if (listState.items.isEmpty) return;
+
+    final index = navigation.index.clamp(0, listState.items.length - 1);
+    setState(() {
+      _displayedIndex = index;
+      _displayedName = listState.items[index].name;
     });
   }
 
@@ -68,12 +100,69 @@ class _PokemonSpriteTransitionState extends ConsumerState<PokemonSpriteTransitio
   }
 
   void _animateTo(String newName, PokedexNavigationDirection direction) {
-    if (_displayedName == newName) return;
+    if (_controller.isAnimating && _incomingName == newName) return;
 
-    _outgoingName = _displayedName ?? newName;
-    _incomingName = newName;
-    _configureAnimations(direction);
+    unawaited(_startAnimation(newName, direction));
+  }
+
+  Future<void> _startAnimation(
+    String newName,
+    PokedexNavigationDirection direction,
+  ) async {
+    await ref.read(pokemonSpritePreloaderProvider)(newName);
+    if (!mounted) return;
+
+    final listState = ref.read(pokemonListNotifierProvider);
+    if (listState.items.isEmpty) return;
+
+    final navigation = ref.read(pokedexNavigationProvider);
+    final targetIndex = navigation.index.clamp(0, listState.items.length - 1);
+    final targetName = listState.items[targetIndex].name;
+    if (targetName != newName) return;
+
+    if (_controller.isAnimating && _incomingName == newName) return;
+    if (_displayedName == newName && !_controller.isAnimating) return;
+
+    setState(() {
+      _outgoingName = _displayedName ?? newName;
+      _incomingName = newName;
+      _configureAnimations(direction);
+    });
     _controller.forward(from: 0);
+  }
+
+  void _handleNavigationChange(
+    PokedexNavigationState? previous,
+    PokedexNavigationState next,
+  ) {
+    if (previous?.index == next.index) return;
+
+    final listState = ref.read(pokemonListNotifierProvider);
+    if (listState.items.isEmpty) return;
+
+    final safeIndex = next.index.clamp(0, listState.items.length - 1);
+    final newName = listState.items[safeIndex].name;
+
+    if (_displayedIndex == null) {
+      if (previous != null && previous.index != next.index) {
+        final previousIndex = previous.index.clamp(0, listState.items.length - 1);
+        setState(() {
+          _displayedIndex = previousIndex;
+          _displayedName = listState.items[previousIndex].name;
+        });
+        _animateTo(newName, next.direction);
+        return;
+      }
+
+      setState(() {
+        _displayedIndex = safeIndex;
+        _displayedName = newName;
+      });
+      return;
+    }
+
+    if (_displayedIndex == safeIndex && !_controller.isAnimating) return;
+    _animateTo(newName, next.direction);
   }
 
   @override
@@ -93,37 +182,48 @@ class _PokemonSpriteTransitionState extends ConsumerState<PokemonSpriteTransitio
 
     final index = navigation.index.clamp(0, listState.items.length - 1);
     final currentName = listState.items[index].name;
-    _displayedName ??= currentName;
 
-    ref.listen(pokedexNavigationProvider, (previous, next) {
-      if (previous == null || previous.index == next.index) return;
-
-      final safeIndex = next.index.clamp(0, listState.items.length - 1);
-      _animateTo(listState.items[safeIndex].name, next.direction);
+    ref.listen(pokemonListNotifierProvider, (previous, next) {
+      if (next.items.isEmpty || _displayedIndex != null) return;
+      _syncInitialSprite();
     });
 
-    final isAnimating =
-        _outgoingName != null && _incomingName != null && _controller.isAnimating;
+    ref.listen(pokedexNavigationProvider, (previous, next) {
+      _handleNavigationChange(previous, next);
+    });
 
-    if (isAnimating || (_controller.value > 0 && _incomingName != null)) {
+    final isAnimating = _outgoingName != null &&
+        _incomingName != null &&
+        (_controller.isAnimating || _controller.value > 0);
+
+    if (isAnimating) {
       return ClipRect(
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            SlideTransition(
-              position: _outgoingSlide,
-              child: _spriteFor(_outgoingName!),
-            ),
-            SlideTransition(
-              position: _incomingSlide,
-              child: _spriteFor(_incomingName!),
-            ),
-          ],
+        child: SizedBox(
+          width: widget.stageWidth,
+          height: widget.stageHeight,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              _slideLayer(_incomingSlide, _incomingName!),
+              _slideLayer(_outgoingSlide, _outgoingName!),
+            ],
+          ),
         ),
       );
     }
 
     return Center(child: _spriteFor(_displayedName ?? currentName));
+  }
+
+  Widget _slideLayer(Animation<Offset> animation, String pokemonName) {
+    return SlideTransition(
+      position: animation,
+      child: SizedBox(
+        width: widget.stageWidth,
+        height: widget.stageHeight,
+        child: Center(child: _spriteFor(pokemonName)),
+      ),
+    );
   }
 
   Widget _spriteFor(String pokemonName) {

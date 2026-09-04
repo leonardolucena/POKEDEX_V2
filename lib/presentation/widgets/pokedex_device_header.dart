@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pokedex/presentation/widgets/pokemon_background_transition.dart';
+import 'package:pokedex/presentation/widgets/pokemon_description_transition.dart';
 import 'package:pokedex/presentation/widgets/pokemon_sprite_transition.dart';
-import 'package:pokedex/presentation/widgets/pokemon_stats_radar_chart.dart';
 import 'package:pokedex/presentation/widgets/pokedex_control_panel.dart';
 import 'package:pokedex/presentation/widgets/pokedex_top_cap.dart';
-import 'package:pokedex/data/models/pokemon.dart';
-import 'package:pokedex/presentation/widgets/pokemon_type_chip.dart';
 import 'package:pokedex/providers/pokemon_providers.dart';
 
 abstract final class PokedexDeviceColors {
@@ -296,8 +294,6 @@ class _PokedexScreenState extends ConsumerState<_PokedexScreen> {
       );
     }
 
-    final featuredAsync = ref.watch(featuredPokemonProvider);
-
     return Column(
       children: [
         Expanded(
@@ -309,6 +305,8 @@ class _PokedexScreenState extends ConsumerState<_PokedexScreen> {
               LayoutBuilder(
                 builder: (context, constraints) {
                   return PokemonSpriteTransition(
+                    stageWidth: constraints.maxWidth,
+                    stageHeight: constraints.maxHeight,
                     maxWidth: constraints.maxWidth * 0.50,
                     maxHeight: constraints.maxHeight * 0.50,
                   );
@@ -317,287 +315,9 @@ class _PokedexScreenState extends ConsumerState<_PokedexScreen> {
             ],
           ),
         ),
-        Expanded(
+        const Expanded(
           flex: 50,
-          child: featuredAsync.when(
-            loading: () => const Center(
-              child: CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 2,
-              ),
-            ),
-            error: (error, stackTrace) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Falha ao carregar os dados.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontSize: 11,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed: () => reloadPokedexData(ref),
-                      child: const Text(
-                        'Tentar novamente',
-                        style: TextStyle(color: Colors.white, fontSize: 11),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            data: (featured) => _PokemonDescriptionSection(
-              key: ValueKey(featured.pokemon.id),
-              pokemon: featured.pokemon,
-              description: featured.description,
-              genus: featured.genus,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PokemonDescriptionSection extends ConsumerWidget {
-  const _PokemonDescriptionSection({
-    super.key,
-    required this.pokemon,
-    required this.description,
-    required this.genus,
-  });
-
-  final Pokemon pokemon;
-  final String description;
-  final String? genus;
-
-  static const _infoGap = 6.0;
-
-  static const _labelStyle = TextStyle(
-    color: Colors.white,
-    fontSize: 12,
-    fontWeight: FontWeight.w700,
-    height: 1.4,
-  );
-
-  static const _bodyStyle = TextStyle(
-    color: Color(0xFFD6D6D6),
-    fontSize: 10,
-    height: 1.55,
-  );
-
-  static const _metaStyle = TextStyle(
-    color: PokedexDeviceColors.infoLabelBlue,
-    fontSize: 9,
-    height: 1.5,
-    fontWeight: FontWeight.w600,
-  );
-
-  static const _metaValueStyle = TextStyle(
-    color: PokedexDeviceColors.infoValueYellow,
-    fontSize: 10,
-    height: 1.5,
-    fontWeight: FontWeight.w600,
-  );
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scrollController = ref.watch(descriptionScrollControllerProvider);
-    final dexNumber = '#${pokemon.id.toString().padLeft(3, '0')}';
-    final abilityText = pokemon.abilities
-        .map(
-          (ability) => ability.isHidden
-              ? '${ability.displayName} (H)'
-              : ability.displayName,
-        )
-        .join(', ');
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-      child: SingleChildScrollView(
-        controller: scrollController,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(
-                    right: pokemon.types.isNotEmpty ? 92 : 0,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text('Numero', style: _metaStyle),
-                      const SizedBox(height: 2),
-                      Text(dexNumber, style: _metaValueStyle),
-                    ],
-                  ),
-                ),
-                if (pokemon.types.isNotEmpty)
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Wrap(
-                      spacing: 4,
-                      runSpacing: 4,
-                      alignment: WrapAlignment.end,
-                      children: [
-                        for (final type in pokemon.types)
-                          PokemonTypeChip(type: type),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: _infoGap),
-            if (genus != null)
-              _MetaPair(
-                leftLabel: 'Nome',
-                leftValue: pokemon.displayName,
-                rightLabel: 'Categoria',
-                rightValue: genus!,
-                labelStyle: _metaStyle,
-                valueStyle: _metaValueStyle,
-              )
-            else
-              _MetaLine(
-                label: 'Nome',
-                value: pokemon.displayName,
-                labelStyle: _metaStyle,
-                valueStyle: _metaValueStyle,
-              ),
-            const SizedBox(height: _infoGap),
-            _MetaPair(
-              leftLabel: 'Altura',
-              leftValue: pokemon.formattedHeight,
-              rightLabel: 'Peso',
-              rightValue: pokemon.formattedWeight,
-              labelStyle: _metaStyle,
-              valueStyle: _metaValueStyle,
-            ),
-            if (abilityText.isNotEmpty) ...[
-              const SizedBox(height: _infoGap),
-              const Text('Habilidades', style: _metaStyle),
-              const SizedBox(height: 2),
-              Text(abilityText, style: _metaValueStyle),
-            ],
-            const SizedBox(height: 12),
-            const Text('Descrição', style: _labelStyle),
-            const SizedBox(height: 4),
-            Text(description, style: _bodyStyle),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Text('Stats', style: _labelStyle),
-                const SizedBox(width: 8),
-                Text(
-                  'Total ${pokemon.stats.total}',
-                  style: _metaValueStyle,
-                ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Align(
-              child: PokemonStatsRadarChart(
-                stats: pokemon.stats,
-                pokemonId: pokemon.id,
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MetaPair extends StatelessWidget {
-  const _MetaPair({
-    required this.leftLabel,
-    required this.leftValue,
-    required this.rightLabel,
-    required this.rightValue,
-    required this.labelStyle,
-    required this.valueStyle,
-  });
-
-  final String leftLabel;
-  final String leftValue;
-  final String rightLabel;
-  final String rightValue;
-  final TextStyle labelStyle;
-  final TextStyle valueStyle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Expanded(child: Text(leftLabel, style: labelStyle)),
-            const SizedBox(width: 8),
-            Expanded(child: Text(rightLabel, style: labelStyle)),
-          ],
-        ),
-        const SizedBox(height: 2),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Text(
-                leftValue,
-                style: valueStyle,
-                softWrap: true,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                rightValue,
-                style: valueStyle,
-                softWrap: true,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _MetaLine extends StatelessWidget {
-  const _MetaLine({
-    required this.label,
-    required this.value,
-    required this.labelStyle,
-    required this.valueStyle,
-  });
-
-  final String label;
-  final String value;
-  final TextStyle labelStyle;
-  final TextStyle valueStyle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: labelStyle),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: valueStyle,
-          softWrap: true,
+          child: PokemonDescriptionTransition(),
         ),
       ],
     );

@@ -89,6 +89,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
           Stack(
             fit: StackFit.expand,
             children: [
+              const ModalBarrier(dismissible: false),
               Align(
                 alignment: Alignment.topCenter,
                 child: SlideTransition(
