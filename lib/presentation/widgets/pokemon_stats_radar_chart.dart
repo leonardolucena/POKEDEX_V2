@@ -29,7 +29,7 @@ class PokemonStatsRadarChart extends StatelessWidget {
   final double size;
   final double maxValue;
 
-  static const _verticalInset = 14.0;
+  static const _verticalInset = 1.0;
 
   @override
   Widget build(BuildContext context) {
@@ -88,8 +88,9 @@ class PokemonStatsRadarChart extends StatelessWidget {
               'Nature: ${nature.displayName}',
               style: const TextStyle(
                 color: PokemonStatsRadarChartColors.natureText,
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight: FontWeight.w500,
+                height: 1.4,
               ),
             ),
           ],
@@ -139,7 +140,7 @@ class _StatLabel extends StatelessWidget {
               color: PokemonStatsRadarChartColors.label,
               fontSize: 9,
               fontWeight: FontWeight.w600,
-              height: 1,
+              height: 1.2,
             ),
           ),
           const SizedBox(height: 2),
@@ -148,9 +149,9 @@ class _StatLabel extends StatelessWidget {
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: PokemonStatsRadarChartColors.value,
-              fontSize: 10,
+              fontSize: 9,
               fontWeight: FontWeight.w700,
-              height: 1,
+              height: 1.2,
             ),
           ),
         ],

@@ -206,10 +206,12 @@ class FeaturedPokemonDetails {
   const FeaturedPokemonDetails({
     required this.pokemon,
     required this.description,
+    required this.genus,
   });
 
   final Pokemon pokemon;
   final String description;
+  final String? genus;
 }
 
 final featuredPokemonProvider = FutureProvider<FeaturedPokemonDetails>((ref) async {
@@ -235,6 +237,7 @@ final featuredPokemonProvider = FutureProvider<FeaturedPokemonDetails>((ref) asy
   return FeaturedPokemonDetails(
     pokemon: pokemon,
     description: species.description,
+    genus: species.genus,
   );
 });
 

@@ -43,6 +43,19 @@ http.Client _mockPokeApiClient() {
           },
           'types': [
             {'type': {'name': 'grass'}},
+            {'type': {'name': 'poison'}},
+          ],
+          'abilities': [
+            {
+              'ability': {'name': 'overgrow'},
+              'is_hidden': false,
+              'slot': 1,
+            },
+            {
+              'ability': {'name': 'chlorophyll'},
+              'is_hidden': true,
+              'slot': 3,
+            },
           ],
           'stats': [
             {'base_stat': 45, 'stat': {'name': 'hp'}},
@@ -65,6 +78,12 @@ http.Client _mockPokeApiClient() {
           'flavor_text_entries': [
             {
               'flavor_text': 'Test description.',
+              'language': {'name': 'en'},
+            },
+          ],
+          'genera': [
+            {
+              'genus': 'Seed Pokémon',
               'language': {'name': 'en'},
             },
           ],

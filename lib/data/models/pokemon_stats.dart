@@ -62,6 +62,8 @@ class PokemonStats {
         specialAttack,
       ];
 
+  int get total => hp + attack + defense + specialAttack + specialDefense + speed;
+
   factory PokemonStats.fromJson(List<dynamic> json) {
     final values = <String, int>{};
 

@@ -43,6 +43,13 @@ void main() {
             'types': [
               {'type': {'name': 'grass'}},
             ],
+            'abilities': [
+              {
+                'ability': {'name': 'overgrow'},
+                'is_hidden': false,
+                'slot': 1,
+              },
+            ],
             'stats': [
               {'base_stat': 45, 'stat': {'name': 'hp'}},
               {'base_stat': 49, 'stat': {'name': 'attack'}},
@@ -64,6 +71,12 @@ void main() {
             'flavor_text_entries': [
               {
                 'flavor_text': 'Test description.',
+                'language': {'name': 'en'},
+              },
+            ],
+            'genera': [
+              {
+                'genus': 'Seed Pokémon',
                 'language': {'name': 'en'},
               },
             ],
@@ -91,5 +104,8 @@ void main() {
     final featured = await container.read(featuredPokemonProvider.future);
     expect(featured.pokemon.name, 'bulbasaur');
     expect(featured.description, 'Test description.');
+    expect(featured.genus, 'Seed Pokémon');
+    expect(featured.pokemon.abilities, hasLength(1));
+    expect(featured.pokemon.stats.total, 318);
   });
 }
