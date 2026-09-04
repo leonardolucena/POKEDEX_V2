@@ -241,6 +241,12 @@ class _PokedexScreenState extends ConsumerState<_PokedexScreen> {
       }
     });
 
+    ref.listen(featuredPokemonProvider, (previous, next) {
+      if (next is AsyncData<FeaturedPokemonDetails>) {
+        ref.read(pokedexNavigationProvider.notifier).preloadNearbyDetails();
+      }
+    });
+
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(6),

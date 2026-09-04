@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:pokedex/core/constants/api_constants.dart';
+import 'package:pokedex/data/cache/pokemon_details_cache.dart';
+import 'package:pokedex/data/models/featured_pokemon_details.dart';
 import 'package:pokedex/data/models/pokemon.dart';
 import 'package:pokedex/data/models/pokemon_list_item.dart';
-import 'package:pokedex/data/models/pokemon_species.dart';
 import 'package:pokedex/data/repositories/pokemon_repository.dart';
 import 'package:pokedex/data/services/pokeapi_service.dart';
+
+export 'package:pokedex/data/models/featured_pokemon_details.dart';
 
 final httpClientProvider = Provider<http.Client>((ref) {
   final client = http.Client();
@@ -18,8 +21,15 @@ final pokeApiServiceProvider = Provider<PokeApiService>((ref) {
   return PokeApiService(client: ref.watch(httpClientProvider));
 });
 
+final pokemonDetailsCacheProvider = Provider<PokemonDetailsCache>((ref) {
+  return PokemonDetailsCache();
+});
+
 final pokemonRepositoryProvider = Provider<PokemonRepository>((ref) {
-  return PokemonRepository(service: ref.watch(pokeApiServiceProvider));
+  return PokemonRepository(
+    service: ref.watch(pokeApiServiceProvider),
+    cache: ref.watch(pokemonDetailsCacheProvider),
+  );
 });
 
 class PokemonListState {
@@ -136,6 +146,7 @@ final descriptionScrollControllerProvider = Provider<ScrollController>((ref) {
 
 class PokedexNavigationNotifier extends Notifier<int> {
   static const _scrollStep = 32.0;
+  static const _preloadAhead = 5;
 
   @override
   int build() => 0;
@@ -147,6 +158,7 @@ class PokedexNavigationNotifier extends Notifier<int> {
     if (state < listState.items.length - 1) {
       state = state + 1;
       _preloadNextPage();
+      preloadNearbyDetails();
       return;
     }
 
@@ -156,12 +168,14 @@ class PokedexNavigationNotifier extends Notifier<int> {
     final updated = ref.read(pokemonListNotifierProvider);
     if (state < updated.items.length - 1) {
       state = state + 1;
+      preloadNearbyDetails();
     }
   }
 
   void selectPrevious() {
     if (state > 0) {
       state = state - 1;
+      preloadNearbyDetails();
     }
   }
 
@@ -195,24 +209,30 @@ class PokedexNavigationNotifier extends Notifier<int> {
       ref.read(pokemonListNotifierProvider.notifier).loadMore();
     }
   }
+
+  void preloadNearbyDetails() {
+    final listState = ref.read(pokemonListNotifierProvider);
+    if (listState.items.isEmpty) return;
+
+    final safeIndex = state.clamp(0, listState.items.length - 1);
+    final names = <String>{};
+
+    for (var offset = 0; offset <= _preloadAhead; offset++) {
+      final index = safeIndex + offset;
+      if (index >= listState.items.length) break;
+      names.add(listState.items[index].name);
+    }
+
+    final repository = ref.read(pokemonRepositoryProvider);
+    repository.retainCachedFeaturedDetails(names);
+    repository.preloadFeaturedPokemonDetails(names.toList());
+  }
 }
 
 final pokedexNavigationProvider =
     NotifierProvider<PokedexNavigationNotifier, int>(
   PokedexNavigationNotifier.new,
 );
-
-class FeaturedPokemonDetails {
-  const FeaturedPokemonDetails({
-    required this.pokemon,
-    required this.description,
-    required this.genus,
-  });
-
-  final Pokemon pokemon;
-  final String description;
-  final String? genus;
-}
 
 final featuredPokemonProvider = FutureProvider<FeaturedPokemonDetails>((ref) async {
   final selectedIndex = ref.watch(pokedexNavigationProvider);
@@ -226,19 +246,7 @@ final featuredPokemonProvider = FutureProvider<FeaturedPokemonDetails>((ref) asy
   final pokemonName = listState.items[safeIndex].name;
   final repository = ref.read(pokemonRepositoryProvider);
 
-  final results = await Future.wait([
-    repository.fetchPokemon(pokemonName),
-    repository.fetchPokemonSpecies(pokemonName),
-  ]);
-
-  final pokemon = results[0] as Pokemon;
-  final species = results[1] as PokemonSpecies;
-
-  return FeaturedPokemonDetails(
-    pokemon: pokemon,
-    description: species.description,
-    genus: species.genus,
-  );
+  return repository.fetchFeaturedPokemonDetails(pokemonName);
 });
 
 Future<void> preloadPokedexData(WidgetRef ref) async {
@@ -251,14 +259,17 @@ Future<void> preloadPokedexData(WidgetRef ref) async {
 
   ref.invalidate(featuredPokemonProvider);
   await ref.read(featuredPokemonProvider.future);
+  ref.read(pokedexNavigationProvider.notifier).preloadNearbyDetails();
 }
 
 Future<void> reloadPokedexData(WidgetRef ref) async {
+  ref.read(pokemonDetailsCacheProvider).clear();
   await ref.read(pokemonListNotifierProvider.notifier).refresh();
   ref.invalidate(featuredPokemonProvider);
 
   final listState = ref.read(pokemonListNotifierProvider);
   if (listState.items.isNotEmpty) {
     await ref.read(featuredPokemonProvider.future);
+    ref.read(pokedexNavigationProvider.notifier).preloadNearbyDetails();
   }
 }
