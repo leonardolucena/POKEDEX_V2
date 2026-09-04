@@ -19,10 +19,11 @@ abstract final class PokedexControlPanelColors {
   static const pillCreamShadow = Color(0xFFE86F4A);
   static const pillCreamDeepShadow = Color(0xFFC45638);
   static const displayYellowBezel = Color(0xFFE8C200);
-  static const displayYellowBezelHighlight = Color(0xFFFFF0A0);
-  static const displayYellowBezelShadow = Color(0xFFB89600);
+  static const displayYellowBezelHighlight = Color(0xFFFFF4B8);
+  static const displayYellowBezelShadow = Color(0xFFC9A800);
   static const displayScreen = Color(0xFFD6BC00);
-  static const displayScreenDeep = Color(0xFFB89E00);
+  static const displayScreenDeep = Color(0xFFCCB415);
+  static const displayScreenShadow = Color(0xFFC4AE1A);
   static const dpadNavy = Color(0xFF1B2A4E);
   static const dpadHighlight = Color(0xFF3D5685);
   static const dpadMid = Color(0xFF243A66);
@@ -368,9 +369,14 @@ class _YellowDisplayCard extends StatelessWidget {
         ),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x55000000),
-            offset: Offset(2, 2.5),
-            blurRadius: 1.5,
+            color: Color(0x38000000),
+            offset: Offset(3, 4),
+            blurRadius: 8,
+          ),
+          BoxShadow(
+            color: Color(0x24000000),
+            offset: Offset(1, 1.5),
+            blurRadius: 2,
           ),
         ],
       ),
@@ -387,8 +393,9 @@ class _YellowDisplayCard extends StatelessWidget {
                     colors: [
                       PokedexControlPanelColors.displayScreenDeep,
                       PokedexControlPanelColors.displayScreen,
-                      PokedexControlPanelColors.displayYellowBezelShadow,
+                      PokedexControlPanelColors.displayScreenShadow,
                     ],
+                    stops: [0, 0.5, 1],
                   ),
                 ),
               ),
@@ -400,9 +407,11 @@ class _YellowDisplayCard extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.center,
                     colors: [
-                      Colors.black.withValues(alpha: 0.34),
+                      Colors.black.withValues(alpha: 0.18),
+                      Colors.black.withValues(alpha: 0.05),
                       Colors.transparent,
                     ],
+                    stops: [0, 0.28, 0.72],
                   ),
                 ),
               ),
@@ -414,9 +423,10 @@ class _YellowDisplayCard extends StatelessWidget {
                     begin: Alignment.bottomRight,
                     end: Alignment.center,
                     colors: [
-                      Colors.white.withValues(alpha: 0.1),
+                      Colors.white.withValues(alpha: 0.06),
                       Colors.transparent,
                     ],
+                    stops: [0, 0.55],
                   ),
                 ),
               ),

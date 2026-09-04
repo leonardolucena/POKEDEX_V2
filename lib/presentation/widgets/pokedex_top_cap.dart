@@ -4,6 +4,13 @@ import 'package:flutter/material.dart';
 
 abstract final class PokedexTopCapColors {
   static const outline = Color(0xFF230B2D);
+  static const shellRed = Color(0xFFE21C26);
+  static const shellRedHighlight = Color(0xFFFF5A63);
+  static const shellRedShadow = Color(0xFFC4161E);
+  static const recessRed = Color(0xFFB5131B);
+  static const recessRedDeep = Color(0xFF8E0F15);
+  static const lineHighlight = Color(0xFFFF8A90);
+  static const lineShadow = Color(0xFF5A0A10);
   static const lensBlue = Color(0xFF00D4FF);
   static const lensBlueHighlight = Color(0xFF66E8FF);
   static const lensBlueMid = Color(0xFF00C8F0);
@@ -59,6 +66,203 @@ extension PokedexLedToneColors on PokedexLedTone {
 abstract final class PokedexTopCapLayout {
   static const horizontalInset = 18.0;
   static const lensBottomPadding = 16.0;
+  static const recessDepth = 2.0;
+}
+
+class _TopCapLineGeometry {
+  const _TopCapLineGeometry({
+    required this.linePath,
+    required this.upperPath,
+    required this.recessPath,
+    required this.lineYLeft,
+    required this.lineYRight,
+  });
+
+  final Path linePath;
+  final Path upperPath;
+  final Path recessPath;
+  final double lineYLeft;
+  final double lineYRight;
+
+  factory _TopCapLineGeometry.fromSize(Size size) {
+    return _TopCapLineGeometry._(
+      width: size.width,
+      height: size.height,
+      topOffset: 0,
+    );
+  }
+
+  factory _TopCapLineGeometry.forScreen({
+    required double screenWidth,
+    required double screenHeight,
+    required double topCapTop,
+    required double topCapHeight,
+  }) {
+    return _TopCapLineGeometry._(
+      width: screenWidth,
+      height: screenHeight,
+      topOffset: topCapTop,
+      topCapHeight: topCapHeight,
+      extendUpperToScreenTop: true,
+    );
+  }
+
+  factory _TopCapLineGeometry._({
+    required double width,
+    required double height,
+    required double topOffset,
+    double? topCapHeight,
+    bool extendUpperToScreenTop = false,
+  }) {
+    final capHeight = topCapHeight ?? height;
+    final lineYLeft = topOffset + capHeight * 0.92;
+    final diagonalStartX = width * 0.52;
+    final diagonalLength = width * 0.14;
+    final lineYRight = lineYLeft - diagonalLength;
+    final diagonalEndX = diagonalStartX + diagonalLength;
+
+    final linePath = Path()
+      ..moveTo(0, lineYLeft)
+      ..lineTo(diagonalStartX, lineYLeft)
+      ..lineTo(diagonalEndX, lineYRight)
+      ..lineTo(width, lineYRight);
+
+    final upperPath = Path()
+      ..moveTo(0, extendUpperToScreenTop ? 0 : topOffset)
+      ..lineTo(width, extendUpperToScreenTop ? 0 : topOffset)
+      ..lineTo(width, lineYRight)
+      ..lineTo(diagonalEndX, lineYRight)
+      ..lineTo(diagonalStartX, lineYLeft)
+      ..lineTo(0, lineYLeft)
+      ..close();
+
+    final recessPath = Path()
+      ..moveTo(0, lineYLeft)
+      ..lineTo(diagonalStartX, lineYLeft)
+      ..lineTo(diagonalEndX, lineYRight)
+      ..lineTo(width, lineYRight)
+      ..lineTo(width, height)
+      ..lineTo(0, height)
+      ..close();
+
+    return _TopCapLineGeometry(
+      linePath: linePath,
+      upperPath: upperPath,
+      recessPath: recessPath,
+      lineYLeft: lineYLeft,
+      lineYRight: lineYRight,
+    );
+  }
+}
+
+class PokedexShellRecessPainter extends CustomPainter {
+  const PokedexShellRecessPainter({
+    required this.topCapTop,
+    required this.topCapHeight,
+  });
+
+  final double topCapTop;
+  final double topCapHeight;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final geometry = _TopCapLineGeometry.forScreen(
+      screenWidth: size.width,
+      screenHeight: size.height,
+      topCapTop: topCapTop,
+      topCapHeight: topCapHeight,
+    );
+    final upperBounds = geometry.upperPath.getBounds();
+    final recessBounds = geometry.recessPath.getBounds();
+
+    canvas.drawPath(
+      geometry.upperPath,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            PokedexTopCapColors.shellRedHighlight.withValues(alpha: 0.18),
+            PokedexTopCapColors.shellRed.withValues(alpha: 0.06),
+            PokedexTopCapColors.shellRedShadow.withValues(alpha: 0.1),
+          ],
+          stops: const [0, 0.55, 1],
+        ).createShader(upperBounds),
+    );
+
+    canvas.save();
+    canvas.clipPath(geometry.upperPath);
+    canvas.drawRect(
+      upperBounds,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: const Alignment(0.35, 0.65),
+          colors: [
+            Colors.white.withValues(alpha: 0.14),
+            Colors.white.withValues(alpha: 0.04),
+            Colors.transparent,
+          ],
+          stops: const [0, 0.35, 1],
+        ).createShader(upperBounds),
+    );
+    canvas.drawRect(
+      upperBounds,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.bottomRight,
+          end: const Alignment(-0.15, 0.45),
+          colors: [
+            Colors.black.withValues(alpha: 0.1),
+            Colors.black.withValues(alpha: 0.04),
+            Colors.transparent,
+          ],
+          stops: const [0, 0.3, 1],
+        ).createShader(upperBounds),
+    );
+    canvas.restore();
+
+    canvas.drawPath(
+      geometry.recessPath,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomLeft,
+          colors: [
+            PokedexTopCapColors.recessRedDeep,
+            PokedexTopCapColors.recessRed,
+            PokedexTopCapColors.shellRedShadow,
+            PokedexTopCapColors.recessRedDeep,
+          ],
+          stops: [0, 0.12, 0.55, 1],
+        ).createShader(recessBounds),
+    );
+
+    canvas.save();
+    canvas.clipPath(geometry.recessPath);
+    canvas.drawRect(
+      recessBounds,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomLeft,
+          colors: [
+            Colors.black.withValues(alpha: 0.42),
+            Colors.black.withValues(alpha: 0.3),
+            Colors.black.withValues(alpha: 0.24),
+            Colors.black.withValues(alpha: 0.2),
+          ],
+          stops: const [0, 0.25, 0.65, 1],
+        ).createShader(recessBounds),
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant PokedexShellRecessPainter oldDelegate) {
+    return topCapTop != oldDelegate.topCapTop ||
+        topCapHeight != oldDelegate.topCapHeight;
+  }
 }
 
 class PokedexTopCap extends StatelessWidget {
@@ -121,25 +325,39 @@ class PokedexTopCapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     const lineStroke = 4.5;
+    const recessDepth = PokedexTopCapLayout.recessDepth;
+    final geometry = _TopCapLineGeometry.fromSize(size);
 
-    final lineYLeft = size.height * 0.92;
-    final diagonalStartX = size.width * 0.52;
-    final diagonalLength = size.width * 0.14;
-    final lineYRight = lineYLeft - diagonalLength;
-    final diagonalEndX = diagonalStartX + diagonalLength;
-
-    final linePath = Path()
-      ..moveTo(0, lineYLeft)
-      ..lineTo(diagonalStartX, lineYLeft)
-      ..lineTo(diagonalEndX, lineYRight)
-      ..lineTo(size.width, lineYRight);
+    final highlightPath = Path.from(geometry.linePath)
+      ..shift(const Offset(-0.6, -1.2));
+    canvas.drawPath(
+      highlightPath,
+      Paint()
+        ..color = PokedexTopCapColors.lineHighlight.withValues(alpha: 0.85)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.square
+        ..strokeJoin = StrokeJoin.miter,
+    );
 
     canvas.drawPath(
-      linePath,
+      geometry.linePath,
       Paint()
         ..color = PokedexTopCapColors.outline
         ..style = PaintingStyle.stroke
         ..strokeWidth = lineStroke
+        ..strokeCap = StrokeCap.square
+        ..strokeJoin = StrokeJoin.miter,
+    );
+
+    final innerShadowPath = Path.from(geometry.linePath)
+      ..shift(Offset(recessDepth * 0.4, recessDepth));
+    canvas.drawPath(
+      innerShadowPath,
+      Paint()
+        ..color = PokedexTopCapColors.lineShadow.withValues(alpha: 0.75)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.2
         ..strokeCap = StrokeCap.square
         ..strokeJoin = StrokeJoin.miter,
     );

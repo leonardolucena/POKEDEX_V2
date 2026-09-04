@@ -34,6 +34,13 @@ class PokemonDescriptionSection extends ConsumerWidget {
     height: 1.4,
   );
 
+  static const _infoHeaderStyle = TextStyle(
+    color: _DescriptionColors.infoLabelBlue,
+    fontSize: 11,
+    fontWeight: FontWeight.w700,
+    height: 1.4,
+  );
+
   static const _descriptionStyle = TextStyle(
     color: _DescriptionColors.infoValueYellow,
     fontSize: 10,
@@ -59,7 +66,6 @@ class PokemonDescriptionSection extends ConsumerWidget {
     final scrollController = scrollEnabled
         ? ref.watch(descriptionScrollControllerProvider)
         : null;
-    final dexNumber = '#${pokemon.id.toString().padLeft(3, '0')}';
     final abilityText = pokemon.abilities
         .map(
           (ability) => ability.isHidden
@@ -86,14 +92,7 @@ class PokemonDescriptionSection extends ConsumerWidget {
                   padding: EdgeInsets.only(
                     right: pokemon.types.isNotEmpty ? 92 : 0,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text('Numero', style: _metaStyle),
-                      const SizedBox(height: 2),
-                      Text(dexNumber, style: _metaValueStyle),
-                    ],
-                  ),
+                  child: const Text('Informações', style: _infoHeaderStyle),
                 ),
                 if (pokemon.types.isNotEmpty)
                   Positioned(
@@ -111,7 +110,7 @@ class PokemonDescriptionSection extends ConsumerWidget {
                   ),
               ],
             ),
-            const SizedBox(height: _infoGap),
+            const SizedBox(height: 8),
             if (genus != null)
               _MetaPair(
                 leftLabel: 'Nome',

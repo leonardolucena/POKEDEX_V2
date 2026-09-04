@@ -13,8 +13,8 @@ abstract final class PokedexDeviceColors {
   static const frameGrayHighlight = Color(0xFFF2F2F2);
   static const frameGrayMid = Color(0xFFD9D9D9);
   static const frameGrayShadow = Color(0xFFB0B0B0);
-  static const frameShadow = Color(0xFF8F8F8F);
-  static const frameDeepShadow = Color(0xFF6E6E6E);
+  static const frameDropShadow = Color(0x59000000);
+  static const frameDropShadowTight = Color(0x3D000000);
   static const outline = Color(0xFF1F1F1F);
   static const screen = Color(0xFF2B2B2B);
   static const screenDeep = Color(0xFF181818);
@@ -41,11 +41,16 @@ abstract final class PokedexDeviceLayout {
   static const horizontalPadding = 18.0;
   static const controlPanelBottomPadding = 50.0;
   static const screenBottomGap = 10.0;
-  static const frameInset = 26.0;
+  static const frameInset = 16.0;
   static const bottomButtonSize = 38.0;
   static const speakerWidthExtra = 10.0;
   static const speakerLineHeight = 4.0;
   static const speakerLineSpacing = 7.0;
+  static const frameBorderWidth = 2.0;
+  static const frameShadowOffset = Offset(6, 8);
+  static const frameShadowBlur = 14.0;
+  static const frameShadowTightOffset = Offset(2.5, 3.5);
+  static const frameShadowTightBlur = 5.0;
 }
 
 class PokedexFrameClipper extends CustomClipper<Path> {
@@ -91,128 +96,131 @@ class PokedexDeviceHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final topCapHeight = screenWidth * 0.28;
 
     return SizedBox(
       height: screenHeight,
-      child: ColoredBox(
-        color: PokedexDeviceColors.backgroundRed,
-        child: Column(
-          children: [
-            const Padding(
-              padding: EdgeInsets.only(top: PokedexDeviceLayout.topPadding),
-              child: PokedexTopCap(),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ColoredBox(color: PokedexDeviceColors.backgroundRed),
+          CustomPaint(
+            painter: PokedexShellRecessPainter(
+              topCapTop: PokedexDeviceLayout.topPadding,
+              topCapHeight: topCapHeight,
             ),
-            const SizedBox(height: PokedexDeviceLayout.grayCardTopPadding),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: PokedexDeviceLayout.horizontalPadding,
-                ),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Positioned(
-                      left: 6,
-                      top: 6,
-                      right: -1,
-                      bottom: -1,
-                      child: const _PokedexFrame(
-                        isShadowLayer: true,
-                        showDetails: false,
+          ),
+          Column(
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(top: PokedexDeviceLayout.topPadding),
+                child: PokedexTopCap(),
+              ),
+              const SizedBox(height: PokedexDeviceLayout.grayCardTopPadding),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: PokedexDeviceLayout.horizontalPadding,
+                  ),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      const Positioned.fill(
+                        child: CustomPaint(
+                          painter: _PokedexFrameShadowPainter(),
+                        ),
                       ),
-                    ),
-                    Positioned.fill(
-                      child: const _PokedexFrame(
-                        isShadowLayer: false,
-                        showDetails: true,
+                      const Positioned.fill(
+                        child: _PokedexFrame(),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const Padding(
-              padding: EdgeInsets.only(
-                bottom: PokedexDeviceLayout.controlPanelBottomPadding,
+              const Padding(
+                padding: EdgeInsets.only(
+                  bottom: PokedexDeviceLayout.controlPanelBottomPadding,
+                ),
+                child: PokedexControlPanel(),
               ),
-              child: PokedexControlPanel(),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
 class _PokedexFrame extends StatelessWidget {
-  const _PokedexFrame({
-    required this.isShadowLayer,
-    required this.showDetails,
-  });
-
-  final bool isShadowLayer;
-  final bool showDetails;
+  const _PokedexFrame();
 
   @override
   Widget build(BuildContext context) {
-    return ClipPath(
-      clipper: const PokedexFrameClipper(),
-      child: CustomPaint(
-        painter: _PokedexFramePainter(isShadowLayer: isShadowLayer),
-        child: showDetails
-            ? LayoutBuilder(
-                builder: (context, constraints) {
-                  final inset = PokedexDeviceLayout.frameInset;
-                  final screenTop = inset + 14 + 12;
-                  final bottomReserved = inset +
-                      PokedexDeviceLayout.bottomButtonSize +
-                      PokedexDeviceLayout.screenBottomGap;
-                  final screenHeight =
-                      constraints.maxHeight - screenTop - bottomReserved;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ClipPath(
+          clipper: const PokedexFrameClipper(),
+          child: CustomPaint(
+            painter: const _PokedexFramePainter(),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final inset = PokedexDeviceLayout.frameInset;
+                final screenTop = inset + 14 + 12;
+                final bottomReserved = inset +
+                    PokedexDeviceLayout.bottomButtonSize +
+                    PokedexDeviceLayout.screenBottomGap;
+                final screenHeight =
+                    constraints.maxHeight - screenTop - bottomReserved;
 
-                  return Stack(
-                    children: [
-                      Positioned(
-                        top: inset,
-                        left: 0,
-                        right: 0,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            _IndicatorLight(size: 14),
-                            SizedBox(width: 18),
-                            _IndicatorLight(size: 14),
-                          ],
-                        ),
+                return Stack(
+                  children: [
+                    Positioned(
+                      top: inset,
+                      left: 0,
+                      right: 0,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          _IndicatorLight(size: 14),
+                          SizedBox(width: 18),
+                          _IndicatorLight(size: 14),
+                        ],
                       ),
-                      Positioned(
-                        left: inset,
-                        right: inset,
-                        top: screenTop,
-                        height: screenHeight.clamp(0, double.infinity),
-                        child: const _PokedexScreen(),
+                    ),
+                    Positioned(
+                      left: inset,
+                      right: inset,
+                      top: screenTop,
+                      height: screenHeight.clamp(0, double.infinity),
+                      child: const _PokedexScreen(),
+                    ),
+                    Positioned(
+                      left: PokedexDeviceLayout.frameInset + 20,
+                      bottom: PokedexDeviceLayout.frameInset,
+                      child: const _IndicatorLight(
+                        size: PokedexDeviceLayout.bottomButtonSize,
                       ),
-                      const Positioned(
-                        left: PokedexDeviceLayout.frameInset,
-                        bottom: PokedexDeviceLayout.frameInset,
-                        child: _IndicatorLight(
-                          size: PokedexDeviceLayout.bottomButtonSize,
-                        ),
+                    ),
+                    Positioned(
+                      right: PokedexDeviceLayout.frameInset,
+                      bottom: PokedexDeviceLayout.frameInset,
+                      child: _SpeakerGrille(
+                        width: constraints.maxWidth * 0.16 +
+                            PokedexDeviceLayout.speakerWidthExtra,
                       ),
-                      Positioned(
-                        right: PokedexDeviceLayout.frameInset,
-                        bottom: PokedexDeviceLayout.frameInset,
-                        child: _SpeakerGrille(
-                          width: constraints.maxWidth * 0.16 +
-                              PokedexDeviceLayout.speakerWidthExtra,
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              )
-            : const SizedBox.expand(),
-      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+        const CustomPaint(
+          painter: _PokedexFrameBorderPainter(),
+        ),
+      ],
     );
   }
 }
@@ -391,6 +399,7 @@ class _PokedexScreenState extends ConsumerState<_PokedexScreen> {
                   );
                 },
               ),
+              _buildDexNumberOverlay(listState),
             ],
           ),
         ),
@@ -401,26 +410,73 @@ class _PokedexScreenState extends ConsumerState<_PokedexScreen> {
       ],
     );
   }
+
+  Widget _buildDexNumberOverlay(PokemonListState listState) {
+    final featured = ref.watch(featuredPokemonProvider);
+    final dexNumber = featured.maybeWhen(
+      data: (details) => '#${details.pokemon.id.toString().padLeft(3, '0')}',
+      orElse: () {
+        final index = ref.watch(pokedexNavigationProvider).index;
+        final safeIndex = index.clamp(0, listState.items.length - 1);
+        final id = listState.items[safeIndex].id;
+        if (id == null) return null;
+        return '#${id.toString().padLeft(3, '0')}';
+      },
+    );
+
+    if (dexNumber == null) return const SizedBox.shrink();
+
+    return Positioned(
+      top: 5,
+      right: 5,
+      child: _OutlinedDexNumber(text: dexNumber),
+    );
+  }
+}
+
+class _OutlinedDexNumber extends StatelessWidget {
+  const _OutlinedDexNumber({required this.text});
+
+  final String text;
+
+  static const _fontSize = 12.0;
+
+  @override
+  Widget build(BuildContext context) {
+    const baseStyle = TextStyle(
+      fontSize: _fontSize,
+      height: 1.5,
+      fontWeight: FontWeight.w600,
+    );
+
+    return Stack(
+      children: [
+        Text(
+          text,
+          style: baseStyle.copyWith(
+            foreground: Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2
+              ..color = Colors.black,
+          ),
+        ),
+        Text(
+          text,
+          style: baseStyle.copyWith(color: Colors.white),
+        ),
+      ],
+    );
+  }
 }
 
 class _PokedexFramePainter extends CustomPainter {
-  const _PokedexFramePainter({required this.isShadowLayer});
-
-  final bool isShadowLayer;
+  const _PokedexFramePainter();
 
   @override
   void paint(Canvas canvas, Size size) {
     final clipper = PokedexFrameClipper();
     final path = clipper.getClip(size);
     final bounds = path.getBounds();
-
-    if (isShadowLayer) {
-      canvas.drawPath(
-        path,
-        Paint()..color = PokedexDeviceColors.frameDeepShadow,
-      );
-      return;
-    }
 
     final fillPaint = Paint()
       ..shader = const LinearGradient(
@@ -464,18 +520,77 @@ class _PokedexFramePainter extends CustomPainter {
     canvas.drawRect(bounds, shadePaint);
 
     canvas.restore();
-
-    final borderPaint = Paint()
-      ..color = PokedexDeviceColors.outline
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5;
-
-    canvas.drawPath(path, borderPaint);
   }
 
   @override
-  bool shouldRepaint(covariant _PokedexFramePainter oldDelegate) {
-    return isShadowLayer != oldDelegate.isShadowLayer;
+  bool shouldRepaint(covariant _PokedexFramePainter oldDelegate) => false;
+}
+
+class _PokedexFrameShadowPainter extends CustomPainter {
+  const _PokedexFrameShadowPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = const PokedexFrameClipper().getClip(size);
+
+    _drawShadowLayer(
+      canvas,
+      path,
+      offset: PokedexDeviceLayout.frameShadowOffset,
+      blur: PokedexDeviceLayout.frameShadowBlur,
+      color: PokedexDeviceColors.frameDropShadow,
+    );
+    _drawShadowLayer(
+      canvas,
+      path,
+      offset: PokedexDeviceLayout.frameShadowTightOffset,
+      blur: PokedexDeviceLayout.frameShadowTightBlur,
+      color: PokedexDeviceColors.frameDropShadowTight,
+    );
+  }
+
+  void _drawShadowLayer(
+    Canvas canvas,
+    Path path,
+    {
+    required Offset offset,
+    required double blur,
+    required Color color,
+  }) {
+    canvas.save();
+    canvas.translate(offset.dx, offset.dy);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, blur),
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _PokedexFrameShadowPainter oldDelegate) => false;
+}
+
+class _PokedexFrameBorderPainter extends CustomPainter {
+  const _PokedexFrameBorderPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = const PokedexFrameClipper().getClip(size);
+
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = PokedexDeviceColors.outline
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = PokedexDeviceLayout.frameBorderWidth,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _PokedexFrameBorderPainter oldDelegate) {
+    return false;
   }
 }
 
